@@ -4,20 +4,40 @@ import com.thinkaurelius.faunus.formats.BlueprintsGraphOutputMapReduce;
 import com.thinkaurelius.faunus.formats.titan.GraphFactory;
 import com.thinkaurelius.faunus.formats.titan.TitanOutputFormat;
 import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.diskstorage.StorageException;
+import com.thinkaurelius.titan.diskstorage.hbase.HBaseStoreManager;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.Properties;
 
 import static com.thinkaurelius.faunus.FaunusGraph.FAUNUS_GRAPH_OUTPUT_FORMAT;
 
 /**
  * Created by kramachandran on 12/6/13.
  */
-public abstract class BaseBullkLoaderDriver extends Configurable {
-    Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
+public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
 
 
 
@@ -92,6 +112,27 @@ public abstract class BaseBullkLoaderDriver extends Configurable {
         return true;
     }
 
+    public byte[] longToBytes(long x) {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putLong(x);
+        return buffer.array();
+    }
+
+    public void createHbaseTable(Configuration configuration) throws StorageException, IOException {
+        //TODO: Figure out how to take full advantage of the  hbase configureation in the props file
+        HBaseAdmin hBaseAdmin = new HBaseAdmin(configuration);
+        String tableName = configuration.get("faunus.graph.output.titan.storage.tablename", "titan");
+        if(hBaseAdmin.tableExists(tableName))
+        {
+            hBaseAdmin.disableTable(tableName);
+            hBaseAdmin.deleteTable(tableName);
+            logger.info("deleting Table!");
+        }
+
+        HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
+        hBaseAdmin.createTable(hTableDescriptor, longToBytes(0), longToBytes(Long.MAX_VALUE), 96);
+    }
+
     /**
      * Will create a Titan graph provided the faunus configuration file is set correctly.
      * <p/>
@@ -99,31 +140,32 @@ public abstract class BaseBullkLoaderDriver extends Configurable {
      *
      * @param configuration
      */
-    public Graph createDB(Configuration configuration) {
+    public Graph createDB(Configuration configuration)
+   {
         TitanGraph graph = null;
 
 
         logger.info(configuration.get(FAUNUS_GRAPH_OUTPUT_FORMAT));
         logger.info("Creating Graph");
         graph = (TitanGraph) GraphFactory.generateGraph(configuration, TitanOutputFormat.FAUNUS_GRAPH_OUTPUT_TITAN);
-        graph.makeKey(BlueprintsGraphOutputMapReduce.BLUEPRINTS_ID).dataType(Long.class).indexed(Vertex.class).unique().make();
         graph.makeKey("uuid").dataType(String.class).indexed(Vertex.class).make();
         graph.makeKey("name").dataType(String.class).make();
-        graph.makeKey("randLong0").dataType(Long.class).make();
-        graph.makeKey("randLong1").dataType(Long.class).make();
+        graph.makeKey("randLong0").dataType(Double.class).make();
+        graph.makeKey("randLong1").dataType(Double.class).make();
         graph.makeKey("randString0").dataType(String.class).make();
         graph.makeKey("randString1").dataType(String.class).make();
         graph.makeKey("randString2").dataType(String.class).make();
-        graph.makeLabel("randLong0").make();
-        graph.makeLabel("randLong1").make();
-        graph.makeLabel("randString0").make();
-        graph.makeLabel("randString1").make();
-        graph.makeLabel("randString2").make();
+        graph.makeLabel("erandLong0").make();
+       graph.makeLabel("erandLong1").make();
+        graph.makeLabel("erandString0").make();
+       graph.makeLabel("erandString1").make();
+        graph.makeLabel("erandString2").make();
+        graph.commit();
         logger.info("Graph Create done!");
+
         return graph;
     }
 
-    @Override
     public int run(String[] args) throws Exception {
         if (parseArgs(args)) {
             Configuration conf = new Configuration();
@@ -135,4 +177,6 @@ public abstract class BaseBullkLoaderDriver extends Configurable {
             return 1;
         }
     }
+
+    protected abstract int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException;
 }

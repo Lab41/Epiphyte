@@ -3,14 +3,9 @@ package org.lab41.mapreduce;
 import com.thinkaurelius.faunus.FaunusGraph;
 import com.thinkaurelius.faunus.FaunusVertex;
 import com.thinkaurelius.faunus.Holder;
-import com.thinkaurelius.faunus.formats.BlueprintsGraphOutputMapReduce;
-import com.thinkaurelius.faunus.formats.titan.GraphFactory;
-import com.thinkaurelius.faunus.formats.titan.TitanOutputFormat;
-import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.diskstorage.StorageException;
 import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.blueprints.Vertex;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -22,18 +17,9 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
-import java.util.Properties;
-
-import static com.thinkaurelius.faunus.FaunusGraph.*;
 
 /**
  * This Driver class does the following :
@@ -47,7 +33,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
 
 
 
-    public int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException {
+    public int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
@@ -55,6 +41,8 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
 
         Configuration job1Config= new Configuration(baseConfiguration);
         Configuration job2Config= new Configuration(baseConfiguration);
+
+        createHbaseTable(baseConfiguration);
 
         Graph titangraph = createDB(baseConfiguration);
         FaunusGraph faunusGraph = new FaunusGraph(baseConfiguration);
@@ -97,7 +85,8 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         FileInputFormat.setInputPaths(job2, intermediatePath);
         FileOutputFormat.setOutputPath(job2, faunusGraph.getOutputLocation());
 
-
+        //no longer need the faunus graph.
+        faunusGraph.shutdown();
 
 
         if(job1.waitForCompletion(true))

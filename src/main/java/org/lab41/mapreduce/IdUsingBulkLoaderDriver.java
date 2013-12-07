@@ -1,15 +1,22 @@
 package org.lab41.mapreduce;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.conf.Configuration;
+
+import java.io.IOException;
 
 /**
  * Created by kramachandran on 12/6/13.
  */
-public class IdUsingBulkLoaderDriver extends Configurable implements Tool {
+public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
+{
 
     @Override
     public int run(String[] args) throws Exception {
+        return 0;
+    }
+
+    @Override
+    protected int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException {
         return 0;
     }
 

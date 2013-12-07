@@ -1,5 +1,7 @@
 package org.lab41.mapreduce;
 
+import org.apache.hadoop.util.Tool;
+
 /**
  * This driver is meant to drive a pipeline consisting of only two stages :
  * 1. A Map step that inputs all the vertices
@@ -11,5 +13,10 @@ package org.lab41.mapreduce;
  *
  *
  */
-public class SeperateEdgeAndVertexListDriver extends IdUsingBulkLoaderDriver {
+public class SeperateEdgeAndVertexListDriver extends IdUsingBulkLoaderDriver implements Tool {
+
+    @Override
+    public int run(String[] args) throws Exception {
+        return super.run(args);
+    }
 }
