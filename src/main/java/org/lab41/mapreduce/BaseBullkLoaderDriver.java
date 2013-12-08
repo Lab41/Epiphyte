@@ -6,6 +6,7 @@ import com.thinkaurelius.faunus.formats.titan.TitanOutputFormat;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.diskstorage.StorageException;
 import com.thinkaurelius.titan.diskstorage.hbase.HBaseStoreManager;
+import com.thinkaurelius.titan.graphdb.idmanagement.IDManager;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
 import org.apache.hadoop.conf.Configurable;
@@ -29,10 +30,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static com.thinkaurelius.faunus.FaunusGraph.FAUNUS_GRAPH_OUTPUT_FORMAT;
+import static org.lab41.mapreduce.AdditionalConfiguration.*;
 
 /**
  * Created by kramachandran on 12/6/13.
@@ -118,10 +119,25 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         return buffer.array();
     }
 
+    /**
+     * Will create a tables in HBase.
+     *
+     * Requires that HBASE_CONF_DIR be set. Does not pull zookeeper qurom from the properties file.
+     * @param configuration
+     * @throws StorageException
+     * @throws IOException
+     */
     public void createHbaseTable(Configuration configuration) throws StorageException, IOException {
         //TODO: Figure out how to take full advantage of the  hbase configureation in the props file
         HBaseAdmin hBaseAdmin = new HBaseAdmin(configuration);
         String tableName = configuration.get("faunus.graph.output.titan.storage.tablename", "titan");
+
+        Boolean presplit = configuration.getBoolean(HBASE_PRESPLIT_KEY,
+                HBASE_PRESPLIT_DEFALUT);
+
+        int numsplts = configuration.getInt(HBASE_NUM_SPLITS_KEY,
+                HBASE_NUM_SPLITS_DEFAULT);
+
         if(hBaseAdmin.tableExists(tableName))
         {
             hBaseAdmin.disableTable(tableName);
@@ -129,8 +145,47 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
             logger.info("deleting Table!");
         }
 
-        HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
-        hBaseAdmin.createTable(hTableDescriptor, longToBytes(0), longToBytes(Long.MAX_VALUE), 96);
+        if(presplit)
+        {
+            logger.info("Splitting! "  + numsplts);
+            HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
+
+            Set<Integer> randomInts = new HashSet<Integer>();
+            SortedSet<Long> sortedSet = new TreeSet<Long>();
+
+            // from package com.thinkaurelius.titan.graphdb.database.idassigner.VertextIDAssigner
+            // Following patther from SimpleBulkPlacementStrategy
+            //Also look at IDMANGER
+            int defaultPartitionBits = 30 ;
+
+            while(randomInts.size() < numsplts)
+            {
+                Random random = new Random();
+                int nextInt = random.nextInt(1 << defaultPartitionBits);
+                logger.info("next Int" + nextInt);
+                randomInts.add(nextInt);
+            }
+
+           for(Integer randInt : randomInts)
+           {
+
+               IDManager idManager = new IDManager(defaultPartitionBits);
+               long boundary = idManager.getVertexID(0, randInt);
+               sortedSet.add(boundary);
+           }
+
+            byte[][] splitList = new byte[numsplts][8];
+            int i = 0;
+
+           for(Long sortedLong : sortedSet)
+           {
+               splitList[i] = longToBytes(sortedLong) ;
+               logger.info("Split at " + sortedLong + " " + Long.toHexString(sortedLong));
+               i++;
+
+           }
+            hBaseAdmin.createTable(hTableDescriptor,  splitList);
+        }
     }
 
     /**
