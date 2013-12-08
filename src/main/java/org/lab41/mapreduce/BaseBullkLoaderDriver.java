@@ -153,40 +153,10 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
             logger.info("Splitting! "  + numsplts);
             HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 
-            // two sections of rows:
-            // 1.  [00, 00, 00, 00, 00, 00, 00, 00] to [03, 00, 00, 00, 00, 00, 00, 00, 00, 00] (1/2 of regions)
-            // 2.  [01, 00, 00, 00, 00, 00, 00, 00] to [FF, FF, FF, FF, FF<, FF, FF, FF, FF, FF]
 
-            byte[] lowStart  = ArrayUtils.EMPTY_BYTE_ARRAY;
-            byte[] lowEnd = new byte[]{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-            byte[][] lowsplits = Bytes.split(lowStart, lowEnd, numsplts / 2);
-            //remove endpointsj
-            lowsplits = Arrays.copyOfRange(lowsplits, 1, lowsplits.length-1);
-
-            byte[]  highStart =new byte[]{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
-            byte[]  highEnd = new byte[]{(byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff};
-            byte[][] highsplits = Bytes.split(highStart, highEnd, numsplts/2);
-            highsplits = Arrays.copyOfRange(highsplits, 1, highsplits.length-1);
-
-            byte[][] splits = new byte[numsplts][8];
-
-            int i;
-            for (i = 0; i < lowsplits.length; i ++)
-            {
-               splits[i] = lowsplits[i];
-            }
-
-            for (i = 0 ;i < highsplits.length; i++)
-            {
-                splits[i+lowsplits.length] = highsplits[i];
-            }
-
-            //debug loop
-            logger.info("Splits : " + splits.length);
-            for (int j =0 ; j < splits.length; j++)
-            {
-                logger.debug("split" + splits[j]);
-            }
+            RegionSplitter.UniformSplit us = new RegionSplitter.UniformSplit();
+            //defaults to 0x00 to 0xffff... as start and end points
+            byte[][] splits = us.split(numsplts);
             hBaseAdmin.createTable(hTableDescriptor,  splits);
         }
     }
