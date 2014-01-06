@@ -8,6 +8,7 @@ import com.tinkerpop.blueprints.Graph;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -17,6 +18,9 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.lab41.hbase.HbaseConfigurator;
+import org.lab41.hbase.TitanHbasePresplitter;
+import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 
 import java.io.IOException;
@@ -29,6 +33,8 @@ import java.io.IOException;
  * the file can be read off of HDFS TODO: Change to allow file to be read off of HDFS with default file in the jar.
  */
 public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool {
+    public HbaseConfigurator hbaseConfigurator;
+
 
 
 
@@ -42,9 +48,10 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         Configuration job1Config= new Configuration(baseConfiguration);
         Configuration job2Config= new Configuration(baseConfiguration);
 
-        createHbaseTable(baseConfiguration);
-
-        Graph titangraph = createDB(baseConfiguration);
+        HbaseConfigurator hbase = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
+//        createHbaseTable(baseConfiguration);
+//
+//        Graph titangraph = createDB(baseConfiguration);
         FaunusGraph faunusGraph = new FaunusGraph(baseConfiguration);
 
         Job job1 = new Job(job1Config);
@@ -53,6 +60,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         job1.setMapperClass(BlueprintsGraphOutputMapReduce.VertexMap.class);
         job1.setMapOutputKeyClass(LongWritable.class);
         job1.setMapOutputValueClass(Holder.class);
+        job1.setReducerClass(BlueprintsGraphOutputMapReduce.Reduce.class);
         job1.setOutputKeyClass(NullWritable.class);
         job1.setOutputValueClass(FaunusVertex.class);
 
@@ -62,6 +70,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         FileSystem fs = FileSystem.get(job1.getConfiguration());
         String job1Outputpath = faunusGraph.getOutputLocation().toString();
         Path intermediatePath =new Path(job1Outputpath + "/job1") ;
+
         if(fs.isDirectory(intermediatePath))
         {
             logger.info("Exists" +intermediatePath+" -- deleting!");
@@ -83,7 +92,16 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         job2.setMapOutputKeyClass(NullWritable.class);
         job2.setMapOutputValueClass(FaunusVertex.class);
         FileInputFormat.setInputPaths(job2, intermediatePath);
-        FileOutputFormat.setOutputPath(job2, faunusGraph.getOutputLocation());
+
+        String strJob2OutputPath = faunusGraph.getOutputLocation().toString();
+        Path job2Path = new Path(strJob2OutputPath + "/job2");
+
+        if(fs.isDirectory(job2Path)){
+            logger.info("Exists" + strJob2OutputPath + " --deleteing");
+            fs.delete(intermediatePath, true);
+        }
+
+        FileOutputFormat.setOutputPath(job2, job2Path);
 
         //no longer need the faunus graph.
         faunusGraph.shutdown();
