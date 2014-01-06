@@ -8,7 +8,7 @@ import java.io.IOException;
 /**
  * Created by kramachandran (karkumar)
  */
-public interface TitanHbasePresplitter {
+public interface TitanHbaseTableCreator {
 
-    public HTableDescriptor split(String tablename, HBaseAdmin hbaseAdmin, int numberofSplits) throws IOException;
+    public void createAndSplitTable(String tablename, HBaseAdmin hbaseAdmin, int numberofSplits) throws IOException;
 }

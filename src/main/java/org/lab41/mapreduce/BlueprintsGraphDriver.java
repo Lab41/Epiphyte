@@ -4,11 +4,9 @@ import com.thinkaurelius.faunus.FaunusGraph;
 import com.thinkaurelius.faunus.FaunusVertex;
 import com.thinkaurelius.faunus.Holder;
 import com.thinkaurelius.titan.diskstorage.StorageException;
-import com.tinkerpop.blueprints.Graph;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -19,9 +17,10 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.lab41.hbase.HbaseConfigurator;
-import org.lab41.hbase.TitanHbasePresplitter;
 import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
+import org.lab41.schema.GraphSchemaWriter;
+import org.lab41.schema.KroneckerGraphSchemaWriter;
 
 import java.io.IOException;
 
@@ -33,26 +32,26 @@ import java.io.IOException;
  * the file can be read off of HDFS TODO: Change to allow file to be read off of HDFS with default file in the jar.
  */
 public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool {
-    public HbaseConfigurator hbaseConfigurator;
 
-
-
-
-
-    public int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
+    public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
 
+        //TODO: Use reflection to set the splitter as a configuration option
+        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
+        hBaseConfigurator.createHbaseTable(baseConfiguration);
 
+        //TODO: Use reflection to set schemaWrite as a configuration option
+
+        GraphSchemaWriter graphSchemaWriter = new KroneckerGraphSchemaWriter();
+        graphSchemaWriter.writeSchema(baseConfiguration);
+
+        //Configure the First adn Second jobs
+        FaunusGraph faunusGraph = new FaunusGraph(baseConfiguration);
         Configuration job1Config= new Configuration(baseConfiguration);
         Configuration job2Config= new Configuration(baseConfiguration);
 
-        HbaseConfigurator hbase = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
-//        createHbaseTable(baseConfiguration);
-//
-//        Graph titangraph = createDB(baseConfiguration);
-        FaunusGraph faunusGraph = new FaunusGraph(baseConfiguration);
 
         Job job1 = new Job(job1Config);
         job1.setJobName("BluePrintsGraphDriver Job1");
@@ -92,6 +91,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         job2.setMapOutputKeyClass(NullWritable.class);
         job2.setMapOutputValueClass(FaunusVertex.class);
         FileInputFormat.setInputPaths(job2, intermediatePath);
+        job2.setNumReduceTasks(0);
 
         String strJob2OutputPath = faunusGraph.getOutputLocation().toString();
         Path job2Path = new Path(strJob2OutputPath + "/job2");
@@ -116,8 +116,6 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
             }
 
         }
-        /* Add second Mapper */
-
         return 1;
     }
 

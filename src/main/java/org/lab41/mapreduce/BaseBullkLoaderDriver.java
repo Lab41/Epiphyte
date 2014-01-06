@@ -102,20 +102,14 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
     public int run(String[] args) throws Exception {
         if (parseArgs(args)) {
             Configuration conf = new Configuration();
-
-            configureJob(conf);
-
-            runJob();
-
+            return configureAndRunJobs(conf);
         } else {
             System.out.println(USAGE_STRING);
             return 1;
         }
     }
 
-    protected abstract void configureJob(Configuration conf)
+    protected abstract int configureAndRunJobs(Configuration conf)
             throws IOException, ClassNotFoundException, InterruptedException, StorageException;
 
-    protected abstract void runJob(Configuration conf)
-            throws IOException, ClassNotFoundException, InterruptedException, StorageException;
 }

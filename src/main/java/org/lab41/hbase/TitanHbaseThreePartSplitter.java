@@ -15,11 +15,11 @@ import org.slf4j.LoggerFactory;
  * This splitter splits the key range into three parts:
  * Created by kramachandran (karkumar)
  */
-public class TitanHbaseThreePartSplitter implements TitanHbasePresplitter {
+public class TitanHbaseThreePartSplitter implements TitanHbaseTableCreator {
     Logger logger = LoggerFactory.getLogger(TitanHbaseThreePartSplitter.class);
-    public HTableDescriptor split(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
+    public void createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
 
-        logger.info("Splitting! " + numSplts);
+        logger.info("Splitting! " + numSplits);
         HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 
 
@@ -31,12 +31,12 @@ public class TitanHbaseThreePartSplitter implements TitanHbasePresplitter {
 
         byte[] midStart = new byte[]{0x01, (byte) 0x00, (int) 0x00, (byte) 0x00, 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
         byte[] midEnd = new byte[]{(byte) 0x01, (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
-        byte[][] midsplits = Bytes.split(midStart, midEnd, (numSplts / 10) * 14);
+        byte[][] midsplits = Bytes.split(midStart, midEnd, (numSplits / 10) * 14);
         midsplits = Arrays.copyOfRange(midsplits, 0, midsplits.length - 1);
 
         byte[] highStart = new byte[]{0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
         byte[] highEnd = new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
-        byte[][] highsplits = Bytes.split(highStart, highEnd, (numSplts / 10) * 3);
+        byte[][] highsplits = Bytes.split(highStart, highEnd, (numSplits / 10) * 3);
         highsplits = Arrays.copyOfRange(highsplits, 0, highsplits.length - 1);
 
         byte[][] splits = new byte[lowsplits.length + midsplits.length + highsplits.length][8];
@@ -57,8 +57,10 @@ public class TitanHbaseThreePartSplitter implements TitanHbasePresplitter {
         //debug loop
         logger.info("Splits : " + splits.length);
         for (int j = 0; j < splits.length; j++) {
-            logger.info("split" + Hex.encodeHexString(splits[j]) + " Bytes.toBytesString : " + Bytes.toStringBinary(splits[j]));
+            logger.info("createAndSplitTable" + Hex.encodeHexString(splits[j]) + " Bytes.toBytesString : " + Bytes.toStringBinary(splits[j]));
         }
         hBaseAdmin.createTable(hTableDescriptor, splits);
+
+
     }
 }
