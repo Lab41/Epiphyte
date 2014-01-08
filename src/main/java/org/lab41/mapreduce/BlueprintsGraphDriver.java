@@ -52,16 +52,15 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         logger.info("Hbase Conf available : " + hbaseConf.available());
         baseConfiguration.addResource(hbaseConf);
 
-        //TODO: Use reflection to set the splitter as a configuration option
-        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
-        hBaseConfigurator.createHbaseTable(baseConfiguration);
-
         BufferedWriter bufferedWriter = new BufferedWriter(new StringWriter());
         baseConfiguration.writeXml(bufferedWriter);
         logger.info("Base Conf: "  + bufferedWriter.toString());
 
-        //TODO: Use reflection to set schemaWrite as a configuration option
+        //TODO: Use reflection to set the splitter as a configuration option
+        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
+        hBaseConfigurator.createHbaseTable(baseConfiguration);
 
+        //TODO: Use reflection to set schemaWrite as a configuration option
         GraphSchemaWriter graphSchemaWriter = new KroneckerGraphSchemaWriter();
         graphSchemaWriter.writeSchema(baseConfiguration);
 

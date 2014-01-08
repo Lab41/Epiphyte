@@ -136,7 +136,7 @@ public class IdUsingBulkLoaderMapReduce {
                 createVertex(value, context);
                 timer += (System.currentTimeMillis() - startTime);
                 rollingCounter++;
-                //---]]
+                //---]
 
                 if(rollingCounter % 10000 == 0)
                 {

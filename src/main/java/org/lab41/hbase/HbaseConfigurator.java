@@ -66,7 +66,8 @@ public class HbaseConfigurator {
         }
         else
         {
-
+            HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
+            hBaseAdmin.createTable(hTableDescriptor);
         }
     }
 

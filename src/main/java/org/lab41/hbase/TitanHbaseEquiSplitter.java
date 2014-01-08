@@ -34,6 +34,6 @@ public class TitanHbaseEquiSplitter implements TitanHbaseSplitterCreator {
             }
 
             hBaseAdmin.createTable(hTableDescriptor, splits);
-
-    }
+            return hTableDescriptor;
+   }
 }

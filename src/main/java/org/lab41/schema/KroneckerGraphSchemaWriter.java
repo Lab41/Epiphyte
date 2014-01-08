@@ -34,16 +34,16 @@ public class KroneckerGraphSchemaWriter implements GraphSchemaWriter{
         graph = (TitanGraph) GraphFactory.generateGraph(configuration, TitanOutputFormat.FAUNUS_GRAPH_OUTPUT_TITAN);
         graph.makeKey("uuid").dataType(String.class).indexed(Vertex.class).make();
         graph.makeKey("name").dataType(String.class).make();
-        graph.makeKey("randLong0").dataType(Double.class).make();
-        graph.makeKey("randLong1").dataType(Double.class).make();
-        graph.makeKey("randString0").dataType(String.class).make();
-        graph.makeKey("randString1").dataType(String.class).make();
-        graph.makeKey("randString2").dataType(String.class).make();
-        graph.makeLabel("erandLong0").make();
-        graph.makeLabel("erandLong1").make();
-        graph.makeLabel("erandString0").make();
-        graph.makeLabel("erandString1").make();
-        graph.makeLabel("erandString2").make();
+        graph.makeKey("vDbl0").dataType(Double.class).make();
+        graph.makeKey("vDbl1").dataType(Double.class).make();
+        graph.makeKey("vStr0").dataType(String.class).make();
+        graph.makeKey("vStr1").dataType(String.class).make();
+        graph.makeKey("vStr2").dataType(String.class).make();
+        graph.makeLabel("eDbl0").make();
+        graph.makeLabel("eDbl1").make();
+        graph.makeLabel("eStr0").make();
+        graph.makeLabel("eStr1").make();
+        graph.makeLabel("eStr2").make();
         graph.commit();
         logger.info("Graph Create done!");
 

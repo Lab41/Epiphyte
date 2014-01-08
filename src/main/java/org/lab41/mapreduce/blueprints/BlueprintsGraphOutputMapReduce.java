@@ -7,10 +7,7 @@ import com.thinkaurelius.faunus.Tokens;
 import com.thinkaurelius.faunus.formats.titan.GraphFactory;
 import com.thinkaurelius.faunus.formats.titan.TitanOutputFormat;
 import com.thinkaurelius.faunus.mapreduce.util.EmptyConfiguration;
-import com.tinkerpop.blueprints.Edge;
-import com.tinkerpop.blueprints.Graph;
-import com.tinkerpop.blueprints.TransactionalGraph;
-import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.*;
 import com.tinkerpop.gremlin.groovy.jsr223.GremlinGroovyScriptEngine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import javax.script.Bindings;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.instrument.Instrumentation;
 import java.util.HashMap;
 
 import static com.tinkerpop.blueprints.Direction.IN;
@@ -80,12 +78,6 @@ public class BlueprintsGraphOutputMapReduce {
         }
     }
 
-    public static Configuration createConfiguration() {
-        final Configuration configuration = new EmptyConfiguration();
-        configuration.setBoolean("mapred.map.tasks.speculative.execution", false);
-        configuration.setBoolean("mapred.reduce.tasks.speculative.execution", false);
-        return configuration;
-    }
 
     ////////////// MAP/REDUCE WORK FROM HERE ON OUT
 
@@ -101,8 +93,6 @@ public class BlueprintsGraphOutputMapReduce {
         private final LongWritable longWritable = new LongWritable();
         private final FaunusVertex shellVertex = new FaunusVertex();
 
-        private long invocationCounter = 0l;
-        private long timer = 0l;
 
         @Override
         public void setup(final Mapper.Context context) throws IOException, InterruptedException {
@@ -132,6 +122,9 @@ public class BlueprintsGraphOutputMapReduce {
                 // Read (and/or Write) FaunusVertex (and respective properties) to Blueprints Graph
                 // Attempt to use the ID provided by Faunus
                 final Vertex blueprintsVertex = this.getOrCreateVertex(value, context);
+                long endCreateVertexTime = System.currentTimeMillis();
+                logger.info("vc(ms): " + (endCreateVertexTime - startTime));
+
 
                 // Propagate shell vertices with Blueprints ids
                 this.shellVertex.reuse(value.getIdAsLong());
@@ -149,16 +142,7 @@ public class BlueprintsGraphOutputMapReduce {
                 context.write(this.longWritable, this.vertexHolder.set('v', value));
                 long endTime = System.currentTimeMillis();
 
-                timer += endTime - startTime;
-                invocationCounter ++;
-                if(invocationCounter % 10000 == 0)
-                {
-                    logger.info("v 10k " + timer/invocationCounter);
-                    timer = 0;
-                    invocationCounter =0;
-                }
-
-
+                logger.info("tc(ms)" + (endTime - startTime));
             } catch (final Exception e) {
                 if (this.graph instanceof TransactionalGraph) {
                     ((TransactionalGraph) this.graph).rollback();
@@ -190,6 +174,7 @@ public class BlueprintsGraphOutputMapReduce {
             if (this.loadingFromScratch) {
                 blueprintsVertex = this.graph.addVertex(faunusVertex.getIdAsLong());
                 context.getCounter(Counters.VERTICES_WRITTEN).increment(1l);
+                logger.debug("number of properties: " + blueprintsVertex.getPropertyKeys().size());
                 for (final String property : faunusVertex.getPropertyKeys()) {
                     blueprintsVertex.setProperty(property, faunusVertex.getProperty(property));
                     context.getCounter(Counters.VERTEX_PROPERTIES_WRITTEN).increment(1l);
@@ -274,8 +259,7 @@ public class BlueprintsGraphOutputMapReduce {
                             context.getCounter(Counters.EDGES_WRITTEN).increment(1l);
 
                             for (final String property : faunusEdge.getPropertyKeys()) {
-                                //TDOD : HACK! prepending property names with e
-                                blueprintsEdge.setProperty("e"+property, faunusEdge.getProperty(property));
+                                blueprintsEdge.setProperty(property, faunusEdge.getProperty(property));
                                 context.getCounter(Counters.EDGE_PROPERTIES_WRITTEN).increment(1l);
                             }
 
@@ -285,20 +269,8 @@ public class BlueprintsGraphOutputMapReduce {
                         }
                         long endTime = System.currentTimeMillis();
 
-                        //Instrumentation:
-                        edgeCounter++;
-                        time += (endTime - startTime);
-                        counter++;
-                        if(counter % 10000 == 0)
-                        {
-                            logger.info("e 10k " + time/counter);
-                            time = 0;
-                            counter =0;
-                        }
 
                     }
-                    //Instrcument - get a sense of deg distribution of verticies
-                    logger.info("v deg "+ blueprintsId + " " + edgeCounter);
                 } else {
                     LOGGER.warn("No source vertex: faunusVertex[" + key.get() + "] blueprintsVertex[" + blueprintsId + "]");
                     context.getCounter(Counters.NULL_VERTICES_IGNORED).increment(1l);
