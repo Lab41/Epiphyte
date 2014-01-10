@@ -39,11 +39,12 @@ public class KroneckerGraphSchemaWriter implements GraphSchemaWriter{
         graph.makeKey("vStr0").dataType(String.class).make();
         graph.makeKey("vStr1").dataType(String.class).make();
         graph.makeKey("vStr2").dataType(String.class).make();
-        graph.makeLabel("eDbl0").make();
-        graph.makeLabel("eDbl1").make();
-        graph.makeLabel("eStr0").make();
-        graph.makeLabel("eStr1").make();
-        graph.makeLabel("eStr2").make();
+        graph.makeKey("eDbl0").dataType(String.class).make();
+        graph.makeKey("eDbl1").dataType(String.class).make();
+        graph.makeKey("eStr0").dataType(String.class).make();
+        graph.makeKey("eStr1").dataType(String.class).make();
+        graph.makeKey("eStr2").dataType(String.class).make();
+        graph.makeLabel("REL").make();
         graph.commit();
         logger.info("Graph Create done!");
 
