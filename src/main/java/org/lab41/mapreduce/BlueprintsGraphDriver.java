@@ -107,6 +107,8 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         }
 
         FileOutputFormat.setOutputPath(job2, job2Path);
+
+        //TODO -- I don't think this actually does anything
         //reduce the size of the splits:
         long splitSize = (long)job2.getConfiguration().getLong("mapred.max.split.size", 67108864);
         job2.getConfiguration().setLong("mapred.max.split.size", splitSize/2);
@@ -163,7 +165,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         logger.info("Base Conf: "  + bufferedWriter.toString());
 
         //TODO: Use reflection to set the splitter as a configuration option
-        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
+        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseEquiSplitter());
         hBaseConfigurator.createHbaseTable(baseConfiguration);
 
         //TODO: Use reflection to set schemaWrite as a configuration option
