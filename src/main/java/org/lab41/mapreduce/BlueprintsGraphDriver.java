@@ -68,6 +68,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
             logger.info("SUCCESS 1: Cleaning up HBASE ");
                HBaseAdmin hBaseAdmin = new HBaseAdmin(baseConfiguration);
                hBaseAdmin.majorCompact(baseConfiguration.get("faunus.graph.output.titan.storage.tablename"));
+              // hBaseAdmin.split(baseConfiguration.get("faunus.graph.output.titan.storage.tablename"));
                hBaseAdmin.balancer();
 
 
@@ -88,7 +89,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         Job job2 = new Job(job2Config);
         job2.setInputFormatClass(SequenceFileInputFormat.class);
         job2.setOutputFormatClass(faunusGraph.getGraphOutputFormat());
-        job2.setJobName("BluePrintsGraphDriver Job2");
+        job2.setJobName("BluePrintsGraphDriver Job2: " + faunusGraph.getInputLocation());
         job2.setJarByClass(BlueprintsGraphDriver.class);
         job2.setMapperClass(BlueprintsGraphOutputMapReduce.EdgeMap.class);
         job2.setMapOutputKeyClass(NullWritable.class);
@@ -117,7 +118,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
     private Job configureJob1(Configuration conf, FaunusGraph faunusGraph, Path intermediatePath, Configuration job1Config, FileSystem fs) throws IOException {
         /** Job 1 Configuration **/
         Job job1 = new Job(job1Config);
-        job1.setJobName("BluePrintsGraphDriver Job1");
+        job1.setJobName("BluePrintsGraphDriver Job1" + faunusGraph.getInputLocation());
         job1.setJarByClass(BlueprintsGraphDriver.class);
         job1.setMapperClass(BlueprintsGraphOutputMapReduce.VertexMap.class);
         job1.setMapOutputKeyClass(LongWritable.class);
@@ -162,7 +163,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         logger.info("Base Conf: "  + bufferedWriter.toString());
 
         //TODO: Use reflection to set the splitter as a configuration option
-        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseEquiSplitter());
+        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
         hBaseConfigurator.createHbaseTable(baseConfiguration);
 
         //TODO: Use reflection to set schemaWrite as a configuration option

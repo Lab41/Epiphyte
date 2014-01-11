@@ -25,18 +25,18 @@ public class TitanHbaseThreePartSplitter implements TitanHbaseSplitterCreator {
 
         byte[] lowStart = ArrayUtils.EMPTY_BYTE_ARRAY;
         byte[] lowEnd = new byte[]{0x01, (byte) 0x00, (int) 0x00, (byte) 0x00, 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
-        byte[][] lowsplits = Bytes.split(lowStart, lowEnd, 5);
+        byte[][] lowsplits = Bytes.split(lowStart, lowEnd, (int)Math.ceil(numSplits * 0.05));
         //remove endpointsj
         lowsplits = Arrays.copyOfRange(lowsplits, 1, lowsplits.length - 1);
 
         byte[] midStart = new byte[]{0x01, (byte) 0x00, (int) 0x00, (byte) 0x00, 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
         byte[] midEnd = new byte[]{(byte) 0x01, (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
-        byte[][] midsplits = Bytes.split(midStart, midEnd, (numSplits / 10) * 14);
+        byte[][] midsplits = Bytes.split(midStart, midEnd, (int)Math.ceil(numSplits*0.25));
         midsplits = Arrays.copyOfRange(midsplits, 0, midsplits.length - 1);
 
         byte[] highStart = new byte[]{0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
         byte[] highEnd = new byte[]{(byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff};
-        byte[][] highsplits = Bytes.split(highStart, highEnd, (numSplits / 10) * 3);
+        byte[][] highsplits = Bytes.split(highStart, highEnd, (int)Math.ceil(numSplits * 0.60));
         highsplits = Arrays.copyOfRange(highsplits, 0, highsplits.length - 1);
 
         byte[][] splits = new byte[lowsplits.length + midsplits.length + highsplits.length][8];
