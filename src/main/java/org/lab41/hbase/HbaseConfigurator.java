@@ -20,10 +20,10 @@ import static org.lab41.mapreduce.AdditionalConfiguration.*;
  * Created by kramachandran (karkumar)
  */
 public class HbaseConfigurator {
-    TitanHbaseSplitterCreator titanHbaseTableCreator;
+    TitanHbaseSplitter titanHbaseTableCreator;
     Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
-    public HbaseConfigurator(TitanHbaseSplitterCreator titanHbaseTableCreator) {
+    public HbaseConfigurator(TitanHbaseSplitter titanHbaseTableCreator) {
         this.titanHbaseTableCreator = titanHbaseTableCreator;
     }
 
@@ -62,7 +62,7 @@ public class HbaseConfigurator {
 
         if(presplit)
         {
-            HTableDescriptor tableDescriptor = titanHbaseTableCreator.createAndSplitTable(tableName, hBaseAdmin, numsplts);
+            HTableDescriptor tableDescriptor = titanHbaseTableCreator.createAndSplitTable(tableName, hBaseAdmin, configuration);
         }
         else
         {

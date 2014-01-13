@@ -1,24 +1,30 @@
 package org.lab41.hbase;
 
 import org.apache.commons.codec.binary.Hex;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.lab41.mapreduce.BlueprintsGraphDriver;
+import org.lab41.mapreduce.SeperateEdgeAndVertexListDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import static org.lab41.Settings.*;
 
 /**
  * Created by kramachandran (karkumar)
  */
-public class TitanHbaseEquiSplitter implements TitanHbaseSplitterCreator {
+public class TitanHbaseEquiSplitter implements TitanHbaseSplitter {
     Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
     @Override
-    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
+    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, Configuration configuration)
+            throws IOException {
+
+            int numSplits = configuration.getInt(NUM_SPLITS_KEY, NUM_SPLITS_DEFAULT);
             logger.info("Splitting! " + numSplits);
             HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 

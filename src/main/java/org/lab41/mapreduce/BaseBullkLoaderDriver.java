@@ -5,15 +5,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.lab41.Settings;
+import org.lab41.hbase.HbaseConfigurator;
+import org.lab41.hbase.TitanHbaseSplitter;
+import org.lab41.hbase.TitanHbaseThreePartSplitter;
+import org.lab41.schema.GraphSchemaWriter;
+import org.lab41.schema.KroneckerGraphSchemaWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Map;
 import java.util.Properties;
 
@@ -23,12 +27,14 @@ import java.util.Properties;
  * Created by kramachandran on 12/6/13.
  */
 public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
+    protected long GB = 1073741824; //number of bytes in a GB
+    protected long MB = 1048576;
 
-
-
-    protected static final String USAGE_STRING = "Arguments:  [{file|hdfs}//:path to properties ]";
-    protected static final int NUM_ARGS = 1;
+    protected static final String USAGE_STRING = "Arguments:  [{file|hdfs}//:path to properties ], [{file|hdfs|://path to system properties], [{file|hdfs}://path to hbase-site.xml}]";
+    protected static final int NUM_ARGS = 3;
     protected String propsPath = null;
+    protected String sysPath = null;
+    protected String hbaseSiteXml = null;
     Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
 
@@ -38,22 +44,24 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         System.exit(exitCode);
     }
 
-    /**
-     * Since this class is meant to only deal with bluk loading scenarios. We need to ensure that the following
-     * properties are set :
-     *
-     * <ul>
-     *     <li></li>
-     * </ul>
-     *
-     * @param configuration
-     */
-    protected void ensureRequiedProperties(Configuration configuration)
-    {
-
-    }
     protected Properties getProperties(String filename, Configuration conf) throws IOException {
         Properties props = null;
+        InputStream is = getInputStreamForPath(filename, conf);
+
+        if (is != null) {
+            logger.info("Input Stream is available : " + is.available());
+        } else {
+            logger.warn("Properties input stream is null ");
+        }
+
+        props = new Properties();
+        props.load(is);
+
+        return props;
+    }
+
+    protected InputStream getInputStreamForPath(String filename, Configuration conf) throws IOException {
+
         InputStream is = null;
         logger.info("Getting Properties file: " + filename);
         String stripped_filename = filename.substring(6);
@@ -66,17 +74,7 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
             is = new FileInputStream(file);
 
         }
-
-        if (is != null) {
-            logger.info("Input Stream is available : " + is.available());
-        } else {
-            logger.warn("Properties input stream is null ");
-        }
-
-        props = new Properties();
-        props.load(is);
-
-        return props;
+        return is;
     }
 
     protected void getAdditionalProperties(Configuration conf, String propertiesFile) throws IOException {
@@ -92,7 +90,8 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         } else if (args.length == NUM_ARGS) {
             logger.info("PATH" + args[0]);
             propsPath = args[0];
-
+            sysPath = args[1];
+            hbaseSiteXml = args[2];
         }
 
         return true;
@@ -110,6 +109,28 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
     }
 
     protected abstract int configureAndRunJobs(Configuration conf)
-            throws IOException, ClassNotFoundException, InterruptedException, StorageException;
+            throws IOException, ClassNotFoundException, InterruptedException, StorageException,
+            InstantiationException, ClassNotFoundException, IllegalAccessException;
 
+    protected void configureHbase(Configuration baseConfiguration, InputStream hbaseConf)
+            throws IOException, StorageException, IllegalAccessException, InstantiationException, ClassNotFoundException {
+
+        logger.info("Hbase Conf available : " + hbaseConf.available());
+        baseConfiguration.addResource(hbaseConf);
+
+        BufferedWriter bufferedWriter = new BufferedWriter(new StringWriter());
+        baseConfiguration.writeXml(bufferedWriter);
+        logger.info("Base Conf: "  + bufferedWriter.toString());
+
+        String strSplitterClazz = baseConfiguration.get(Settings.SPLITTER_CLASS_KEY, Settings.SPLITTER_CLASS_DEFUALT);
+        Class  splitterClazz = Class.forName(strSplitterClazz);
+        TitanHbaseSplitter splitter = (TitanHbaseSplitter)splitterClazz.newInstance();
+
+        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(splitter);
+        hBaseConfigurator.createHbaseTable(baseConfiguration);
+
+        //TODO: Use reflection to set schemaWrite as a configuration option
+        GraphSchemaWriter graphSchemaWriter = new KroneckerGraphSchemaWriter();
+        graphSchemaWriter.writeSchema(baseConfiguration);
+    }
 }

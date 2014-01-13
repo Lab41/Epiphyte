@@ -1,10 +1,12 @@
 package org.lab41.mapreduce;
 
+import com.codahale.metrics.Timer;
 import com.thinkaurelius.faunus.FaunusVertex;
 import com.thinkaurelius.faunus.formats.BlueprintsGraphOutputMapReduce;
 import com.thinkaurelius.faunus.formats.BlueprintsGraphOutputMapReduce.Counters;
 import com.thinkaurelius.titan.core.TitanVertex;
 import com.thinkaurelius.titan.core.util.TitanId;
+import com.thinkaurelius.titan.util.stats.MetricManager;
 import com.tinkerpop.blueprints.*;
 import org.apache.cassandra.cli.CliParser;
 import org.apache.hadoop.io.NullWritable;
@@ -19,6 +21,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Set;
 
+import static com.codahale.metrics.MetricRegistry.name;
+import static com.tinkerpop.blueprints.Direction.IN;
+import static com.tinkerpop.blueprints.Direction.OUT;
 
 /**
  *  This set of MapReduce jobs executes a bulk load reusing the ids of the nodes provides in the sequence file.
@@ -37,7 +42,6 @@ public class IdUsingBulkLoaderMapReduce {
     public static abstract class BaseMapper extends Mapper<NullWritable, FaunusVertex, NullWritable, NullWritable>
     {
         protected Graph graph;
-        protected MultipleOutputs<NullWritable, Text> multipleOutputs;
         protected Logger logger = LoggerFactory.getLogger(VertexMapper.class);
 
 
@@ -50,11 +54,21 @@ public class IdUsingBulkLoaderMapReduce {
 
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException {
-            if (this.graph instanceof TransactionalGraph) {
-                    ((TransactionalGraph) this.graph).commit();
-                    context.getCounter(Counters.SUCCESSFUL_TRANSACTIONS).increment(1l);
+            MetricManager metricManager = MetricManager.INSTANCE;
+            Timer commitTimer = metricManager.getRegistry().timer(name("IdUsingBulkLoaderMapReduce.VertexMapper", "commit"));
+            Timer.Context commitTimerContext = commitTimer.time();
+            try
+            {
+                if (this.graph instanceof TransactionalGraph) {
+                        ((TransactionalGraph) this.graph).commit();
+                        context.getCounter(Counters.SUCCESSFUL_TRANSACTIONS).increment(1l);
+                }
+                this.graph.shutdown();
             }
-            this.graph.shutdown();
+            finally
+            {
+                commitTimerContext.stop();
+            }
         }
     }
     public static class VertexMapper extends BaseMapper{
@@ -62,13 +76,27 @@ public class IdUsingBulkLoaderMapReduce {
 
         public Vertex createVertex(FaunusVertex faunusVertex, Context context)
         {
-            Vertex blueprintsVertex = this.graph.addVertex(TitanId.toVertexId(faunusVertex.getIdAsLong()));
-            context.getCounter(Counters.VERTICES_WRITTEN).increment(1l);
-            for (final String property : faunusVertex.getPropertyKeys()) {
-                blueprintsVertex.setProperty(property, faunusVertex.getProperty(property));
-                context.getCounter(Counters.VERTEX_PROPERTIES_WRITTEN).increment(1l);
+            MetricManager metricManager = MetricManager.INSTANCE;
+            Timer createVertexTimer = metricManager.getRegistry().timer(name("IdUsingBulkLoaderMapReduce.VertexMapper",
+                    "createVertex"));
+
+            Timer.Context vertexContext = createVertexTimer.time();
+
+            try
+            {
+                Vertex blueprintsVertex = this.graph.addVertex(TitanId.toVertexId(faunusVertex.getIdAsLong()));
+                context.getCounter(Counters.VERTICES_WRITTEN).increment(1l);
+                for (final String property : faunusVertex.getPropertyKeys()) {
+                    blueprintsVertex.setProperty(property, faunusVertex.getProperty(property));
+                    context.getCounter(Counters.VERTEX_PROPERTIES_WRITTEN).increment(1l);
+                }
+
+                return blueprintsVertex;
             }
-            return blueprintsVertex;
+            finally {
+                vertexContext.stop();
+
+            }
         }
 
 
@@ -91,6 +119,11 @@ public class IdUsingBulkLoaderMapReduce {
 
         @Override
         protected void map(NullWritable key, FaunusVertex value, Context context) throws IOException, InterruptedException {
+            MetricManager metricManager = MetricManager.INSTANCE;
+            Timer createEdgeTimer = metricManager.getRegistry().timer(name("IdUsingBulkLoaderMapReduce.EdgeMapper",
+                    "createEdge"));
+
+            Timer.Context edgeContext = createEdgeTimer.time();
             try{
                 //Only have to process OUTS because every OUT is someone elses IN!
                 Set<String> outLabels = value.getEdgeLabels(Direction.OUT);
@@ -147,6 +180,9 @@ public class IdUsingBulkLoaderMapReduce {
                     context.getCounter(Counters.FAILED_TRANSACTIONS).increment(1l);
                 }
                 throw new IOException(e.getMessage(), e);
+            }
+            finally {
+                edgeContext.stop();
             }
         }
 

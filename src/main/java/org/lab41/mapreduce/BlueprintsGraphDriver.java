@@ -19,7 +19,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.lab41.HdfsUtil;
 import org.lab41.hbase.HbaseConfigurator;
-import org.lab41.hbase.TitanHbaseEquiSplitter;
 import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 import org.lab41.schema.GraphSchemaWriter;
@@ -39,16 +38,18 @@ import java.io.StringWriter;
  */
 public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool {
 
-    protected long GB = 1073741824; //number of bytes in a GB
-        protected long MB = 1048576;
 
 
-    public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
+    public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException, InstantiationException, IllegalAccessException {
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
 
-        configureHbase(baseConfiguration);
+        String hbaseSiteXmlPath = hbaseSiteXml;
+
+        InputStream hbaseSiteXmlIS = getInputStreamForPath(hbaseSiteXmlPath, baseConfiguration);
+
+        configureHbase(baseConfiguration, hbaseSiteXmlIS);
 
         //Configure the First adn Second jobs
         FaunusGraph faunusGraph = new FaunusGraph(baseConfiguration);
@@ -68,7 +69,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
             logger.info("SUCCESS 1: Cleaning up HBASE ");
                HBaseAdmin hBaseAdmin = new HBaseAdmin(baseConfiguration);
                hBaseAdmin.majorCompact(baseConfiguration.get("faunus.graph.output.titan.storage.tablename"));
-              // hBaseAdmin.split(baseConfiguration.get("faunus.graph.output.titan.storage.tablename"));
+               hBaseAdmin.split(baseConfiguration.get("faunus.graph.output.titan.storage.tablename"));
                hBaseAdmin.balancer();
 
 
@@ -150,27 +151,6 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         // The job is configure with 4 gb of memory;
         job1.setNumReduceTasks((int)Math.ceil(splits/48));
         return job1;
-    }
-
-    private void configureHbase(Configuration baseConfiguration) throws IOException, StorageException {
-        //For some reason oozie jobs don't see to pick up the hbase-site.xml
-        //getting around it by packing in the jar
-        InputStream hbaseConf= this.getClass().getClassLoader().getResourceAsStream("hbase-site.xml");
-
-        logger.info("Hbase Conf available : " + hbaseConf.available());
-        baseConfiguration.addResource(hbaseConf);
-
-        BufferedWriter bufferedWriter = new BufferedWriter(new StringWriter());
-        baseConfiguration.writeXml(bufferedWriter);
-        logger.info("Base Conf: "  + bufferedWriter.toString());
-
-        //TODO: Use reflection to set the splitter as a configuration option
-        HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseEquiSplitter());
-        hBaseConfigurator.createHbaseTable(baseConfiguration);
-
-        //TODO: Use reflection to set schemaWrite as a configuration option
-        GraphSchemaWriter graphSchemaWriter = new KroneckerGraphSchemaWriter();
-        graphSchemaWriter.writeSchema(baseConfiguration);
     }
 
 }

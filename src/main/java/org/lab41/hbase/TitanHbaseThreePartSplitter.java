@@ -2,6 +2,7 @@ package org.lab41.hbase;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -10,15 +11,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import static org.lab41.Settings.*;
 /**
  * This splitter splits the key range into three parts:
  * Created by kramachandran (karkumar)
  */
-public class TitanHbaseThreePartSplitter implements TitanHbaseSplitterCreator {
+public class TitanHbaseThreePartSplitter implements TitanHbaseSplitter {
     Logger logger = LoggerFactory.getLogger(TitanHbaseThreePartSplitter.class);
-    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
+    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, Configuration conf) throws IOException {
 
+      int numSplits = conf.getInt(NUM_SPLITS_KEY, NUM_SPLITS_DEFAULT);
         logger.info("Splitting! " + numSplits);
         HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 

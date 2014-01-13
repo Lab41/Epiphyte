@@ -9,8 +9,10 @@
             <prepare>
                 <delete path="${nameNode}/${tempPath}"/>
             </prepare>
-            <main-class>org.lab41.mapreduce.BlueprintsGraphDriver</main-class>
+            <main-class>${mainClass}</main-class>
             <arg>${propsPath}</arg>
+            <arg>${sysPropsPath}</arg>
+            <arg>${hbaseSiteXmlPath}</arg>
         </java>
         <ok to="end"/>
         <error to="fail"/>
