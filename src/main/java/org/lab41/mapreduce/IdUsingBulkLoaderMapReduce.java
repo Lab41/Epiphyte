@@ -42,7 +42,7 @@ public class IdUsingBulkLoaderMapReduce {
     public static abstract class BaseMapper extends Mapper<NullWritable, FaunusVertex, NullWritable, NullWritable>
     {
         protected Graph graph;
-        protected Logger logger = LoggerFactory.getLogger(VertexMapper.class);
+        protected Logger logger = LoggerFactory.getLogger(BaseMapper.class);
 
 
 
@@ -84,7 +84,11 @@ public class IdUsingBulkLoaderMapReduce {
 
             try
             {
-                Vertex blueprintsVertex = this.graph.addVertex(TitanId.toVertexId(faunusVertex.getIdAsLong()));
+                Long rawID = faunusVertex.getIdAsLong();
+                logger.info("rawID : " + rawID);
+                Long titanID = TitanId.toVertexId(rawID +1 );
+                Vertex blueprintsVertex = this.graph.addVertex(titanID);
+                logger.info("titanID: " + blueprintsVertex.getId());
                 context.getCounter(Counters.VERTICES_WRITTEN).increment(1l);
                 for (final String property : faunusVertex.getPropertyKeys()) {
                     blueprintsVertex.setProperty(property, faunusVertex.getProperty(property));
@@ -128,7 +132,7 @@ public class IdUsingBulkLoaderMapReduce {
                 //Only have to process OUTS because every OUT is someone elses IN!
                 Set<String> outLabels = value.getEdgeLabels(Direction.OUT);
 
-                long sourceID= TitanId.toVertexId(value.getIdAsLong());
+                long sourceID= TitanId.toVertexId(value.getIdAsLong()+1);
                 Vertex sourceVertex = graph.getVertex(sourceID);
 
                 if(sourceVertex != null)
@@ -139,7 +143,7 @@ public class IdUsingBulkLoaderMapReduce {
                         Iterable<Edge> edges =  value.getEdges(Direction.OUT, label);
                         for(Edge faunusEdge : edges)
                         {
-                            Long destID =  TitanId.toVertexId(((FaunusVertex)faunusEdge.getVertex(Direction.IN)).getIdAsLong());
+                            Long destID =  TitanId.toVertexId(((FaunusVertex)faunusEdge.getVertex(Direction.IN)).getIdAsLong()+1);
                             Vertex destVertex = graph.getVertex(destID);
 
 

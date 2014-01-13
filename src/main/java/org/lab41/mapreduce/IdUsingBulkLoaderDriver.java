@@ -15,12 +15,16 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.util.ToolRunner;
 import org.lab41.HdfsUtil;
 import org.lab41.hbase.HbaseConfigurator;
 import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 import org.lab41.schema.GraphSchemaWriter;
 import org.lab41.schema.KroneckerGraphSchemaWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.lab41.Settings.*;
 
 import java.io.BufferedWriter;
@@ -30,15 +34,17 @@ import java.io.StringWriter;
 
 public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
 {
+    Logger logger = LoggerFactory.getLogger(IdUsingBulkLoaderDriver.class);
 
     public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException, InstantiationException, IllegalAccessException {
+
+        logger.info("IdUsingBulkLoaderDriver");
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
         getAdditionalProperties(baseConfiguration, sysPath);
 
         String hbaseSiteXmlPath = hbaseSiteXml;
-
         InputStream hbaseSiteXmlIS = getInputStreamForPath(hbaseSiteXmlPath, baseConfiguration);
 
         configureHbase(baseConfiguration, hbaseSiteXmlIS);
@@ -49,9 +55,8 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
         String job1Outputpath = faunusGraph.getOutputLocation().toString();
         Path intermediatePath =new Path(job1Outputpath + "/job1") ;
 
-        Configuration job1Config= new Configuration(baseConfiguration);
         FileSystem fs = FileSystem.get(baseConfiguration);
-        Job job1 = configureJob1(conf, faunusGraph, intermediatePath, job1Config, fs);
+        Job job1 = configureJob1(faunusGraph, intermediatePath, baseConfiguration, fs);
         Job job2 = configureJob2(baseConfiguration, faunusGraph,  fs);
 
         //no longer need the faunus graph.
@@ -87,7 +92,7 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
         Job job2 = new Job(job2Config);
         job2.setInputFormatClass(SequenceFileInputFormat.class);
         job2.setOutputFormatClass(faunusGraph.getGraphOutputFormat());
-        job2.setJobName("BluePrintsGraphDriver Job2: " + faunusGraph.getInputLocation());
+        job2.setJobName("IdUsingBulkLoader Job2: " + faunusGraph.getInputLocation());
         job2.setJarByClass(IdUsingBulkLoaderDriver.class);
         job2.setMapperClass(IdUsingBulkLoaderMapReduce.EdgeMapper.class);
         job2.setMapOutputKeyClass(NullWritable.class);
@@ -109,11 +114,15 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
         return job2;
     }
 
-    private Job configureJob1(Configuration conf, FaunusGraph faunusGraph, Path intermediatePath, Configuration job1Config, FileSystem fs) throws IOException {
+    private Job configureJob1( FaunusGraph faunusGraph,
+                              Path intermediatePath, Configuration baseConfiguration, FileSystem fs) throws IOException {
+
+        Configuration job1Config = new Configuration(baseConfiguration);
         /** Job 1 Configuration **/
+
         Job job1 = new Job(job1Config);
-        job1.setJobName("BluePrintsGraphDriver Job1" + faunusGraph.getInputLocation());
-        job1.setJarByClass(BlueprintsGraphDriver.class);
+        job1.setJobName("IdUsingBulkLoader Job1" + faunusGraph.getInputLocation());
+        job1.setJarByClass(IdUsingBulkLoaderDriver.class);
         job1.setMapperClass(IdUsingBulkLoaderMapReduce.VertexMapper.class);
         job1.setMapOutputKeyClass(LongWritable.class);
         job1.setMapOutputValueClass(Holder.class);
@@ -136,6 +145,11 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
         return job1;
     }
 
+    public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new IdUsingBulkLoaderDriver(), args);
+
+        System.exit(exitCode);
+    }
 
 
 }

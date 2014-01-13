@@ -21,7 +21,7 @@ import static org.lab41.mapreduce.AdditionalConfiguration.*;
  */
 public class HbaseConfigurator {
     TitanHbaseSplitter titanHbaseTableCreator;
-    Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
+    Logger logger = LoggerFactory.getLogger(HbaseConfigurator.class);
 
     public HbaseConfigurator(TitanHbaseSplitter titanHbaseTableCreator) {
         this.titanHbaseTableCreator = titanHbaseTableCreator;

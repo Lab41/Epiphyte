@@ -54,7 +54,7 @@
     <value>2181</value>
   </property>
   <property>
-        <name>hbase.ipc.client.tcpnodelay</name>
-        <value>true</value>
+    <name>hbase.ipc.client.tcpnodelay</name>
+    <value>true</value>
   </property>
 </configuration>

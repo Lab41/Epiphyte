@@ -10,7 +10,7 @@ public class AdditionalConfiguration {
      * must all set lab41.hbase.numberOfSplits.
      */
     public static final String HBASE_PRESPLIT_KEY = "lab41.hbase.presplit";
-    public static final boolean HBASE_PRESPLIT_DEFALUT = false;
+    public static final boolean HBASE_PRESPLIT_DEFALUT = true;
 
     /**
      *

@@ -35,21 +35,16 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
     protected String propsPath = null;
     protected String sysPath = null;
     protected String hbaseSiteXml = null;
-    Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
+    Logger logger = LoggerFactory.getLogger(BaseBullkLoaderDriver.class);
 
 
-    public static void main(String[] args) throws Exception {
-        int exitCode = ToolRunner.run(new BlueprintsGraphDriver(), args);
-
-        System.exit(exitCode);
-    }
 
     protected Properties getProperties(String filename, Configuration conf) throws IOException {
         Properties props = null;
         InputStream is = getInputStreamForPath(filename, conf);
 
         if (is != null) {
-            logger.info("Input Stream is available : " + is.available());
+            logger.info("Input Stream is available for " + filename +": " + is.available());
         } else {
             logger.warn("Properties input stream is null ");
         }
@@ -118,14 +113,11 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         logger.info("Hbase Conf available : " + hbaseConf.available());
         baseConfiguration.addResource(hbaseConf);
 
-        BufferedWriter bufferedWriter = new BufferedWriter(new StringWriter());
-        baseConfiguration.writeXml(bufferedWriter);
-        logger.info("Base Conf: "  + bufferedWriter.toString());
-
         String strSplitterClazz = baseConfiguration.get(Settings.SPLITTER_CLASS_KEY, Settings.SPLITTER_CLASS_DEFUALT);
         Class  splitterClazz = Class.forName(strSplitterClazz);
         TitanHbaseSplitter splitter = (TitanHbaseSplitter)splitterClazz.newInstance();
 
+        logger.info("Made splitter + " + splitter.getClass().getCanonicalName());
         HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(splitter);
         hBaseConfigurator.createHbaseTable(baseConfiguration);
 

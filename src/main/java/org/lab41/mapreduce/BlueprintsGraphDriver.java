@@ -17,12 +17,15 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.lab41.HdfsUtil;
 import org.lab41.hbase.HbaseConfigurator;
 import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 import org.lab41.schema.GraphSchemaWriter;
 import org.lab41.schema.KroneckerGraphSchemaWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -38,12 +41,13 @@ import java.io.StringWriter;
  */
 public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool {
 
-
+    Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
     public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException, InstantiationException, IllegalAccessException {
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
+        getAdditionalProperties(baseConfiguration, sysPath);
 
         String hbaseSiteXmlPath = hbaseSiteXml;
 
@@ -59,8 +63,9 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
 
         Configuration job1Config= new Configuration(baseConfiguration);
         FileSystem fs = FileSystem.get(baseConfiguration);
+
         Job job1 = configureJob1(conf, faunusGraph, intermediatePath, job1Config, fs);
-        Job job2 = configureJob2(baseConfiguration, faunusGraph, intermediatePath, fs);
+        Job job2 = configureJob2(baseConfiguration, faunusGraph, fs);
 
         //no longer need the faunus graph.
         faunusGraph.shutdown();
@@ -84,7 +89,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         return 1;
     }
 
-    private Job configureJob2(Configuration baseConfiguration, FaunusGraph faunusGraph, Path intermediatePath, FileSystem fs) throws IOException {
+    private Job configureJob2(Configuration baseConfiguration, FaunusGraph faunusGraph,  FileSystem fs) throws IOException {
         Configuration job2Config= new Configuration(baseConfiguration);
         /** Job  2 Configuration **/
         Job job2 = new Job(job2Config);
@@ -96,7 +101,9 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         job2.setMapOutputKeyClass(NullWritable.class);
         job2.setMapOutputValueClass(FaunusVertex.class);
 
-        FileInputFormat.setInputPaths(job2, intermediatePath);
+        Path inputPath = faunusGraph.getInputLocation();
+
+        FileInputFormat.setInputPaths(job2, inputPath);
         job2.setNumReduceTasks(0);
 
         String strJob2OutputPath = faunusGraph.getOutputLocation().toString();
@@ -104,7 +111,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
 
         if(fs.isDirectory(job2Path)){
             logger.info("Exists" + strJob2OutputPath + " --deleteing");
-            fs.delete(intermediatePath, true);
+            fs.delete(job2Path, true);
         }
 
         FileOutputFormat.setOutputPath(job2, job2Path);
@@ -153,4 +160,9 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         return job1;
     }
 
+    public static void main(String[] args) throws Exception {
+        int exitCode = ToolRunner.run(new BlueprintsGraphDriver(), args);
+
+        System.exit(exitCode);
+    }
 }
