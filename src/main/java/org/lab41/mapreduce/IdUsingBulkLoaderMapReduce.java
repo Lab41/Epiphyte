@@ -175,7 +175,6 @@ public class IdUsingBulkLoaderMapReduce {
                     logger.warn("No source vertex: faunusVertex[" + sourceID + "]");
                     context.getCounter(Counters.NULL_VERTICES_IGNORED).increment(1l);
                 }
-                context.write(NullWritable.get(), NullWritable.get());
             }
             catch(Exception e)
             {
