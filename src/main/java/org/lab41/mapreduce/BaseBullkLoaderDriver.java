@@ -9,6 +9,7 @@ import com.thinkaurelius.titan.diskstorage.hbase.HBaseStoreManager;
 import com.thinkaurelius.titan.graphdb.idmanagement.IDManager;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.Vertex;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -20,6 +21,8 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -150,41 +153,41 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
             logger.info("Splitting! "  + numsplts);
             HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 
-            Set<Integer> randomInts = new HashSet<Integer>();
-            SortedSet<Long> sortedSet = new TreeSet<Long>();
+            // two sections of rows:
+            // 1.  [00, 00, 00, 00, 00, 00, 00, 00] to [03, 00, 00, 00, 00, 00, 00, 00, 00, 00] (1/2 of regions)
+            // 2.  [01, 00, 00, 00, 00, 00, 00, 00] to [FF, FF, FF, FF, FF<, FF, FF, FF, FF, FF]
 
-            // from package com.thinkaurelius.titan.graphdb.database.idassigner.VertextIDAssigner
-            // Following patther from SimpleBulkPlacementStrategy
-            //Also look at IDMANGER
-            int defaultPartitionBits = 30 ;
+            byte[] lowStart  = ArrayUtils.EMPTY_BYTE_ARRAY;
+            byte[] lowEnd = new byte[]{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+            byte[][] lowsplits = Bytes.split(lowStart, lowEnd, numsplts / 2);
+            //remove endpointsj
+            lowsplits = Arrays.copyOfRange(lowsplits, 1, lowsplits.length-1);
 
-            while(randomInts.size() < numsplts)
+            byte[]  highStart =new byte[]{0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
+            byte[]  highEnd = new byte[]{(byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff};
+            byte[][] highsplits = Bytes.split(highStart, highEnd, numsplts/2);
+            highsplits = Arrays.copyOfRange(highsplits, 1, highsplits.length-1);
+
+            byte[][] splits = new byte[numsplts][8];
+
+            int i;
+            for (i = 0; i < lowsplits.length; i ++)
             {
-                Random random = new Random();
-                int nextInt = random.nextInt(1 << defaultPartitionBits);
-                logger.info("next Int" + nextInt);
-                randomInts.add(nextInt);
+               splits[i] = lowsplits[i];
             }
 
-           for(Integer randInt : randomInts)
-           {
+            for (i = 0 ;i < highsplits.length; i++)
+            {
+                splits[i+lowsplits.length] = highsplits[i];
+            }
 
-               IDManager idManager = new IDManager(defaultPartitionBits);
-               long boundary = idManager.getVertexID(0, randInt);
-               sortedSet.add(boundary);
-           }
-
-            byte[][] splitList = new byte[numsplts][8];
-            int i = 0;
-
-           for(Long sortedLong : sortedSet)
-           {
-               splitList[i] = longToBytes(sortedLong) ;
-               logger.info("Split at " + sortedLong + " " + Long.toHexString(sortedLong));
-               i++;
-
-           }
-            hBaseAdmin.createTable(hTableDescriptor,  splitList);
+            //debug loop
+            logger.info("Splits : " + splits.length);
+            for (int j =0 ; j < splits.length; j++)
+            {
+                logger.debug("split" + splits[j]);
+            }
+            hBaseAdmin.createTable(hTableDescriptor,  splits);
         }
     }
 
