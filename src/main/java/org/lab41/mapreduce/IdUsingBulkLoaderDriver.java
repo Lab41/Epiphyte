@@ -1,5 +1,6 @@
 package org.lab41.mapreduce;
 
+import com.thinkaurelius.titan.diskstorage.StorageException;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -16,9 +17,10 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
     }
 
     @Override
-    protected int configureGeneratorJob(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException {
+    protected int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
         return 0;
     }
+
 
     public static void main(String[] args) throws Exception{
 

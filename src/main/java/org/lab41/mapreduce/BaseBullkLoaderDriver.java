@@ -56,7 +56,7 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         Properties props = null;
         InputStream is = null;
         logger.info("Getting Properties file: " + filename);
-        String stripped_filename = filename.substring(7);
+        String stripped_filename = filename.substring(6);
         logger.info("Stripped file name: " + stripped_filename);
         if (filename.startsWith("hdfs://")) {
             FileSystem fs = FileSystem.get(conf);

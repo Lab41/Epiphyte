@@ -16,13 +16,17 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.lab41.HdfsUtil;
 import org.lab41.hbase.HbaseConfigurator;
 import org.lab41.hbase.TitanHbaseThreePartSplitter;
 import org.lab41.mapreduce.blueprints.BlueprintsGraphOutputMapReduce;
 import org.lab41.schema.GraphSchemaWriter;
 import org.lab41.schema.KroneckerGraphSchemaWriter;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 
 /**
  * This Driver class does the following :
@@ -33,14 +37,28 @@ import java.io.IOException;
  */
 public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool {
 
+    protected long GB = 1073741824; //number of bytes in a GB
+    protected long MB = 1048576;
+
     public int configureAndRunJobs(Configuration conf) throws IOException, ClassNotFoundException, InterruptedException, StorageException {
 
         Configuration baseConfiguration = getConf();
         getAdditionalProperties(baseConfiguration, propsPath);
 
+        //For some reason oozie jobs don't see to pick up the hbase-site.xml
+        //getting around it by packing in the jar
+        InputStream hbaseConf= this.getClass().getClassLoader().getResourceAsStream("hbase-site.xml");
+
+        logger.info("Hbase Conf available : " + hbaseConf.available());
+        baseConfiguration.addResource(hbaseConf);
+
         //TODO: Use reflection to set the splitter as a configuration option
         HbaseConfigurator hBaseConfigurator = new HbaseConfigurator(new TitanHbaseThreePartSplitter());
         hBaseConfigurator.createHbaseTable(baseConfiguration);
+
+        BufferedWriter bufferedWriter = new BufferedWriter(new StringWriter());
+        baseConfiguration.writeXml(bufferedWriter);
+        logger.info("Base Conf: "  + bufferedWriter.toString());
 
         //TODO: Use reflection to set schemaWrite as a configuration option
 
@@ -53,6 +71,7 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         Configuration job2Config= new Configuration(baseConfiguration);
 
 
+        /** Job 1 Configuration **/
         Job job1 = new Job(job1Config);
         job1.setJobName("BluePrintsGraphDriver Job1");
         job1.setJarByClass(BlueprintsGraphDriver.class);
@@ -79,9 +98,16 @@ public class BlueprintsGraphDriver extends BaseBullkLoaderDriver implements Tool
         FileOutputFormat.setOutputPath(job1, intermediatePath);
         Path inputPath = faunusGraph.getInputLocation();
         FileInputFormat.setInputPaths(job1, inputPath);
+            /***** Figure out how many reducer ********/
+
+        Path[] paths  = SequenceFileInputFormat.getInputPaths(job1);
+        long splits = HdfsUtil.getNumOfSplitsForInputs(paths, conf, MB*64);
+
+         // The job is configure with 4 gb of memory;
+        job1.setNumReduceTasks((int)Math.ceil(splits/48));
 
 
-        /** Add and run First Mapper / Reducer **/
+        /** Job  2 Configuration **/
         Job job2 = new Job(job2Config);
         job2.setInputFormatClass(SequenceFileInputFormat.class);
         job2.setOutputFormatClass(faunusGraph.getGraphOutputFormat());

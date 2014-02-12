@@ -12,7 +12,11 @@
     <!-- This should copy over the sample properties file and the sample xml file -->
     <fileSets>
         <fileSet>
-            <directory>src/main/oozie</directory>
+            <directory>oozie</directory>
+            <outputDirectory>/</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>properties</directory>
             <outputDirectory>/</outputDirectory>
         </fileSet>
         <fileSet>

@@ -14,11 +14,11 @@ import java.io.IOException;
 /**
  * Created by kramachandran (karkumar)
  */
-public class TitanHbaseEquiSplitter implements TitanHbaseTableCreator {
+public class TitanHbaseEquiSplitter implements TitanHbaseSplitterCreator {
     Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
     @Override
-    public void createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
+    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
             logger.info("Splitting! " + numSplits);
             HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
 

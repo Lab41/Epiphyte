@@ -2,6 +2,7 @@ package org.lab41.hbase;
 
 import com.thinkaurelius.titan.diskstorage.StorageException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.lab41.mapreduce.BlueprintsGraphDriver;
 import org.slf4j.Logger;
@@ -19,10 +20,10 @@ import static org.lab41.mapreduce.AdditionalConfiguration.*;
  * Created by kramachandran (karkumar)
  */
 public class HbaseConfigurator {
-    TitanHbaseTableCreator titanHbaseTableCreator;
+    TitanHbaseSplitterCreator titanHbaseTableCreator;
     Logger logger = LoggerFactory.getLogger(BlueprintsGraphDriver.class);
 
-    public HbaseConfigurator(TitanHbaseTableCreator titanHbaseTableCreator) {
+    public HbaseConfigurator(TitanHbaseSplitterCreator titanHbaseTableCreator) {
         this.titanHbaseTableCreator = titanHbaseTableCreator;
     }
 
@@ -43,6 +44,7 @@ public class HbaseConfigurator {
     public void createHbaseTable(Configuration configuration) throws StorageException, IOException {
         //TODO: Figure out how to take full advantage of the  hbase configureation in the props file
         HBaseAdmin hBaseAdmin = new HBaseAdmin(configuration);
+
         String tableName = configuration.get("faunus.graph.output.titan.storage.tablename", "titan");
 
         Boolean presplit = configuration.getBoolean(HBASE_PRESPLIT_KEY,
@@ -59,6 +61,10 @@ public class HbaseConfigurator {
         }
 
         if(presplit)
+        {
+            HTableDescriptor tableDescriptor = titanHbaseTableCreator.createAndSplitTable(tableName, hBaseAdmin, numsplts);
+        }
+        else
         {
 
         }

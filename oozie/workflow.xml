@@ -1,10 +1,14 @@
-<workflow-app xmlns="uri:oozie:workflow:0.2" name="MRKroncker-wf" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="Bulkload-wf"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="uri:oozie:workflow:0.2 ">
-    <start to="BlueprintsGraphDriver" />
-    <action name="BluePrintsGraphDriver">
+    <start to="BlueprintsGraphDriver"/>
+    <action name="BlueprintsGraphDriver">
         <java>
             <job-tracker>${jobTracker}</job-tracker>
             <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/${tempPath}"/>
+            </prepare>
             <main-class>org.lab41.mapreduce.BlueprintsGraphDriver</main-class>
             <arg>${propsPath}</arg>
         </java>

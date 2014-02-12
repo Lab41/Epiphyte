@@ -15,9 +15,9 @@ import org.slf4j.LoggerFactory;
  * This splitter splits the key range into three parts:
  * Created by kramachandran (karkumar)
  */
-public class TitanHbaseThreePartSplitter implements TitanHbaseTableCreator {
+public class TitanHbaseThreePartSplitter implements TitanHbaseSplitterCreator {
     Logger logger = LoggerFactory.getLogger(TitanHbaseThreePartSplitter.class);
-    public void createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
+    public HTableDescriptor createAndSplitTable(String tableName, HBaseAdmin hBaseAdmin, int numSplits) throws IOException {
 
         logger.info("Splitting! " + numSplits);
         HTableDescriptor hTableDescriptor = new HTableDescriptor(tableName);
@@ -57,10 +57,12 @@ public class TitanHbaseThreePartSplitter implements TitanHbaseTableCreator {
         //debug loop
         logger.info("Splits : " + splits.length);
         for (int j = 0; j < splits.length; j++) {
-            logger.info("createAndSplitTable" + Hex.encodeHexString(splits[j]) + " Bytes.toBytesString : " + Bytes.toStringBinary(splits[j]));
+            logger.info("createAndSplitTable" + Hex.encodeHexString(splits[j]) +
+                    " Bytes.toBytesString : " + Bytes.toStringBinary(splits[j]));
         }
-        hBaseAdmin.createTable(hTableDescriptor, splits);
 
+        hBaseAdmin.createTable(hTableDescriptor, splits);
+        return hTableDescriptor;
 
     }
 }
