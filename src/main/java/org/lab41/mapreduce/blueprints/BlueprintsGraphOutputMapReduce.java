@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 In-Q-Tel Inc.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package org.lab41.mapreduce.blueprints;
 
 import com.codahale.metrics.Histogram;
@@ -35,6 +51,7 @@ import static com.tinkerpop.blueprints.Direction.IN;
 import static com.tinkerpop.blueprints.Direction.OUT;
 
 /**
+ *
  * BlueprintsGraphOutputMapReduce will write a [NullWritable, FaunusVertex] stream to a Blueprints-enabled graph.
  * This is useful for bulk loading a Faunus graph into a Blueprints graph.
  * Graph writing happens in three distinction phase.
@@ -44,7 +61,10 @@ import static com.tinkerpop.blueprints.Direction.OUT;
  * Each write stage is embarrassingly parallel with reduce communication only used to communicate generated vertex ids.
  * The output of the final Map phase is a degenerate graph and is not considered viable for consumption.
  *
- * @author Marko A. Rodriguez (http://markorodriguez.com)
+ * Copied from Faunus (https://github.com/thinkaurelius/faunus/blob/master/src/main/java/com/thinkaurelius/faunus/formats/BlueprintsGraphOutputMapReduce.java).
+ * With some minor modifications.
+ *
+ * @author Marko A. Rodriguez (http://markorodriguez.com) , Kramachandran
  */
 public class BlueprintsGraphOutputMapReduce {
 
