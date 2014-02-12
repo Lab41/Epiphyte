@@ -113,6 +113,7 @@ public abstract class BaseBullkLoaderDriver extends Configured implements Tool {
         logger.info("Hbase Conf available : " + hbaseConf.available());
         baseConfiguration.addResource(hbaseConf);
 
+
         String strSplitterClazz = baseConfiguration.get(Settings.SPLITTER_CLASS_KEY, Settings.SPLITTER_CLASS_DEFUALT);
         Class  splitterClazz = Class.forName(strSplitterClazz);
         TitanHbaseSplitter splitter = (TitanHbaseSplitter)splitterClazz.newInstance();

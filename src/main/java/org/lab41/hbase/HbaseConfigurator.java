@@ -4,14 +4,12 @@ import com.thinkaurelius.titan.diskstorage.StorageException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.lab41.mapreduce.BlueprintsGraphDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import static org.lab41.mapreduce.AdditionalConfiguration.*;
+import static org.lab41.Settings.*;
 
 /**
  * This class sets up HBase for the test by :
@@ -50,8 +48,6 @@ public class HbaseConfigurator {
         Boolean presplit = configuration.getBoolean(HBASE_PRESPLIT_KEY,
                 HBASE_PRESPLIT_DEFALUT);
 
-        int numsplts = configuration.getInt(HBASE_NUM_SPLITS_KEY,
-                HBASE_NUM_SPLITS_DEFAULT);
 
         if(hBaseAdmin.tableExists(tableName))
         {
@@ -60,8 +56,10 @@ public class HbaseConfigurator {
             logger.info("deleting Table!");
         }
 
+        logger.info("presplit : " + presplit);
         if(presplit)
         {
+
             HTableDescriptor tableDescriptor = titanHbaseTableCreator.createAndSplitTable(tableName, hBaseAdmin, configuration);
         }
         else

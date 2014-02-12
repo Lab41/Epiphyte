@@ -41,6 +41,11 @@ public class IdUsingBulkLoaderDriver extends BaseBullkLoaderDriver
         logger.info("IdUsingBulkLoaderDriver");
 
         Configuration baseConfiguration = getConf();
+
+        StringWriter stringWriter = new StringWriter();
+        baseConfiguration.writeXml(stringWriter);
+        stringWriter.toString();
+
         getAdditionalProperties(baseConfiguration, propsPath);
         getAdditionalProperties(baseConfiguration, sysPath);
 

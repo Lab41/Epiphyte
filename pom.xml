@@ -13,7 +13,7 @@
         <hadoop.core.version>2.0.0-cdh4.4.0</hadoop.core.version>
         <hadoop.version>2.0.0-cdh4.4.0</hadoop.version>
         <tinkerpop.version>2.4.0</tinkerpop.version>
-        <titan.version>0.4.1</titan.version>
+        <titan.version>0.4.1-random</titan.version>
         <faunus.version>0.4.2-Lab41-scale-SNAPSHOT</faunus.version>
         <hbase.version>0.94.6-cdh4.4.0</hbase.version>
     </properties>

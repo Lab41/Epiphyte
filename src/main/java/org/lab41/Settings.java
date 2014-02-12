@@ -13,6 +13,16 @@ public class Settings {
     public static int NUM_SPLITS_DEFAULT = 128;
 
     /**
+     *
+     */
+     /**
+     * If lab41.hbase.presplit is set to true then the you
+     * must all set lab41.hbase.numberOfSplits.
+     */
+    public static final String HBASE_PRESPLIT_KEY = "org.lab41.hbase.presplit";
+    public static final boolean HBASE_PRESPLIT_DEFALUT = false;
+
+    /**
      * Used to determine which pre-splitter to use
      */
     public static String SPLITTER_CLASS_KEY = "org.lab41.hbase.preSplitterClass";
