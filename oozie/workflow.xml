@@ -1,0 +1,62 @@
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="MRKroncker-wf" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="uri:oozie:workflow:0.2 ">
+    <start to="EdgeGenerator" />
+    <action name="EdgeGenerator">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/${base_output_dir}/${kronecker_N}"/>
+            </prepare>
+            <main-class>org.lab41.dendrite.generator.kronecker.mapreduce.fast.EdgeCreationDriver</main-class>
+            <arg>${base_output_dir}/${kronecker_N}/edges</arg>
+            <arg>${kronecker_num_annotations}</arg>
+            <arg>${kronecker_N}</arg>
+            <arg>${t_11}</arg>
+            <arg>${t_12}</arg>
+            <arg>${t_21}</arg>
+            <arg>${t_22}</arg>
+        </java>
+        <ok to="VertexGenerator"/>
+        <error to="fail"/>
+    </action>
+    <action name="VertexGenerator">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/${base_output_dir}/${kronecker_N}/vertices"/>
+            </prepare>
+            <main-class>org.lab41.dendrite.generator.kronecker.mapreduce.fast.VertexCreationDriver</main-class>
+            <arg>${base_output_dir}/${kronecker_N}/vertices</arg>
+            <arg>${kronecker_num_annotations}</arg>
+            <arg>${kronecker_N}</arg>
+            <arg>${t_11}</arg>
+            <arg>${t_12}</arg>
+            <arg>${t_21}</arg>
+            <arg>${t_22}</arg>
+        </java>
+        <ok to="GraphCreation"/>
+        <error to="fail"/>
+    </action>
+    <action name="GraphCreation">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${nameNode}/${base_output_dir}/${kronecker_N}/undirected"/>
+            </prepare>
+            <main-class>org.lab41.dendrite.generator.kronecker.mapreduce.fast.GraphCreationDriver</main-class>
+            <arg>${kronecker_num_annotations}</arg>
+            <arg>${base_output_dir}/${kronecker_N}/edges</arg>
+            <arg>${base_output_dir}/${kronecker_N}/vertices</arg>
+            <arg>${base_output_dir}/${kronecker_N}/undirected</arg>
+        </java>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+    <kill name="fail">
+        <message>Map/Reduce failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
